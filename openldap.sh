@@ -37,41 +37,44 @@ if [[ ! -d ${OPENLDAP_CONFIG_DIR}/cn=config ]]; then
         cat /srv/openldap/ldap.conf.template | envsubst > ${OPENLDAP_ETC_DIR}/ldap.conf
     fi
 
-    mkdir -p ${OPENLDAP_BACKEND_DIR}/run
-    chown -R ldap:ldap ${OPENLDAP_BACKEND_DIR}
-    chown -R ldap:ldap ${OPENLDAP_CONFIG_DIR} ${OPENLDAP_BACKEND_DIR}
+    if [[ ! -d ${OPENLDAP_BACKEND_DIR}]] || [ ! "$(ls -A ${OPENLDAP_BACKEND_DIR}})" ]; then
 
-    if [[ -d /srv/openldap.d ]]; then
-        if [[ ! -s /srv/openldap.d/000-domain.ldif ]]; then
-            cat /srv/openldap/domain.ldif.template | envsubst > /srv/openldap.d/000-domain.ldif
-        fi
+      mkdir -p ${OPENLDAP_BACKEND_DIR}/run
+      chown -R ldap:ldap ${OPENLDAP_BACKEND_DIR}
+      chown -R ldap:ldap ${OPENLDAP_CONFIG_DIR} ${OPENLDAP_BACKEND_DIR}
 
-        slapd_exe=$(which slapd)
-        echo >&2 "$0 ($slapd_exe): starting initdb daemon"
-        slapd -u ldap -g ldap -h ldapi:///
+      if [[ -d /srv/openldap.d ]]; then
+          if [[ ! -s /srv/openldap.d/000-domain.ldif ]]; then
+              cat /srv/openldap/domain.ldif.template | envsubst > /srv/openldap.d/000-domain.ldif
+          fi
 
-        for f in $(find /srv/openldap.d -type f | sort); do
-            case "$f" in
-                *.sh)   echo "$0: sourcing $f"; . "$f" ;;
-                *.ldif) echo "$0: applying $f"; ldapadd -Y EXTERNAL -f "$f" 2>&1;;
-                *)      echo "$0: ignoring $f" ;;
-            esac
-        done
+          slapd_exe=$(which slapd)
+          echo >&2 "$0 ($slapd_exe): starting initdb daemon"
+          slapd -u ldap -g ldap -h ldapi:///
 
-        if [[ ! -s ${OPENLDAP_RUN_PIDFILE} ]]; then
-            echo >&2 "$0 ($slapd_exe): ${OPENLDAP_RUN_PIDFILE} is missing, did the daemon start?"
-            exit 1
-        else
-            slapd_pid=$(cat ${OPENLDAP_RUN_PIDFILE})
-            echo >&2 "$0 ($slapd_exe): sending SIGINT to initdb daemon with pid=$slapd_pid"
-            kill -s INT "$slapd_pid" || true
-            while : ; do
-                [[ ! -f ${OPENLDAP_RUN_PIDFILE} ]] && break
-                sleep 1
-                echo >&2 "$0 ($slapd_exe): initdb daemon is still up, sleeping ..."
-            done
-            echo >&2 "$0 ($slapd_exe): initdb daemon stopped"
-        fi
+          for f in $(find /srv/openldap.d -type f | sort); do
+              case "$f" in
+                  *.sh)   echo "$0: sourcing $f"; . "$f" ;;
+                  *.ldif) echo "$0: applying $f"; ldapadd -Y EXTERNAL -f "$f" 2>&1;;
+                  *)      echo "$0: ignoring $f" ;;
+              esac
+          done
+
+          if [[ ! -s ${OPENLDAP_RUN_PIDFILE} ]]; then
+              echo >&2 "$0 ($slapd_exe): ${OPENLDAP_RUN_PIDFILE} is missing, did the daemon start?"
+              exit 1
+          else
+              slapd_pid=$(cat ${OPENLDAP_RUN_PIDFILE})
+              echo >&2 "$0 ($slapd_exe): sending SIGINT to initdb daemon with pid=$slapd_pid"
+              kill -s INT "$slapd_pid" || true
+              while : ; do
+                  [[ ! -f ${OPENLDAP_RUN_PIDFILE} ]] && break
+                  sleep 1
+                  echo >&2 "$0 ($slapd_exe): initdb daemon is still up, sleeping ..."
+              done
+              echo >&2 "$0 ($slapd_exe): initdb daemon stopped"
+          fi
+      fi
     fi
 fi
 
