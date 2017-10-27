@@ -37,11 +37,11 @@ if [[ ! -d ${OPENLDAP_CONFIG_DIR}/cn=config ]]; then
         cat /srv/openldap/ldap.conf.template | envsubst > ${OPENLDAP_ETC_DIR}/ldap.conf
     fi
 
-    if [[ ! -d ${OPENLDAP_BACKEND_DIR} ]] || [ ! "$(ls -A ${OPENLDAP_BACKEND_DIR})" ]; then
+    mkdir -p ${OPENLDAP_BACKEND_DIR}/run
+    chown -R ldap:ldap ${OPENLDAP_BACKEND_DIR}
+    chown -R ldap:ldap ${OPENLDAP_CONFIG_DIR} ${OPENLDAP_BACKEND_DIR}
 
-      mkdir -p ${OPENLDAP_BACKEND_DIR}/run
-      chown -R ldap:ldap ${OPENLDAP_BACKEND_DIR}
-      chown -R ldap:ldap ${OPENLDAP_CONFIG_DIR} ${OPENLDAP_BACKEND_DIR}
+    if [[ ! -f ${OPENLDAP_BACKEND_DIR}/initialised ]]; then
 
       if [[ -d /srv/openldap.d ]]; then
           if [[ ! -s /srv/openldap.d/000-domain.ldif ]]; then
@@ -54,8 +54,8 @@ if [[ ! -d ${OPENLDAP_CONFIG_DIR}/cn=config ]]; then
 
           for f in $(find /srv/openldap.d -type f | sort); do
               case "$f" in
-                  *.sh)   echo "$0: sourcing $f"; . "$f" ;;
-                  *.ldif) echo "$0: applying $f"; ldapadd -Y EXTERNAL -f "$f" 2>&1;;
+                  *.sh)   echo "$0: sourcing $f"; . "$f" || true ;;
+                  *.ldif) echo "$0: applying $f"; ldapadd -Y EXTERNAL -f "$f" 2>&1 || true;;
                   *)      echo "$0: ignoring $f" ;;
               esac
           done
@@ -75,6 +75,8 @@ if [[ ! -d ${OPENLDAP_CONFIG_DIR}/cn=config ]]; then
               echo >&2 "$0 ($slapd_exe): initdb daemon stopped"
           fi
       fi
+
+      touch ${OPENLDAP_BACKEND_DIR}/initialised
     fi
 fi
 
