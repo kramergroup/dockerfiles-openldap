@@ -37,7 +37,7 @@ if [[ ! -d ${OPENLDAP_CONFIG_DIR}/cn=config ]]; then
         cat /srv/openldap/ldap.conf.template | envsubst > ${OPENLDAP_ETC_DIR}/ldap.conf
     fi
 
-    if [[ ! -d ${OPENLDAP_BACKEND_DIR}]] || [ ! "$(ls -A ${OPENLDAP_BACKEND_DIR})" ]; then
+    if [[ ! -d ${OPENLDAP_BACKEND_DIR} ]] || [ ! "$(ls -A ${OPENLDAP_BACKEND_DIR})" ]; then
 
       mkdir -p ${OPENLDAP_BACKEND_DIR}/run
       chown -R ldap:ldap ${OPENLDAP_BACKEND_DIR}
